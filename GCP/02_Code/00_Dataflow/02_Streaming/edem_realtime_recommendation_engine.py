@@ -18,7 +18,7 @@ Professor: Javi Briones & Adriana Campos
 
 # A. Apache Beam Libraries
 import apache_beam as beam
-from apache_beam.options.pipeline_options import PipelineOptions
+from apache_beam.options.pipeline_options import PipelineOptions, SetupOptions 
 from apache_beam.transforms.window import Sessions, SlidingWindows
 from apache_beam.io.filesystems import FileSystems
 from apache_beam.utils.timestamp import Timestamp
@@ -40,9 +40,9 @@ def parsePubSubMessage(message):
     Returns:
         dict: Parsed message as a dictionary.
     """
-
-    #ToDo
-
+    output = message.decode("utf-8")
+    logging.info(f"Received message: {output}")
+    message_dict = json.loads(output)
     return message_dict
 
 def normalizePlaybackEvent(event):
@@ -257,37 +257,37 @@ def run():
     
     parser.add_argument(
                 '--engagement_pubsub_subscription_name',
-                required=True,
+                required=False,
                 help='Pub/Sub subscription for engagement events.')
     
     parser.add_argument(
                 '--quality_pubsub_subscription_name',
-                required=True,
+                required=False,
                 help='Pub/Sub subscription for quality events.')
 
     parser.add_argument(
                 '--notifications_pubsub_topic_name',
-                required=True,
+                required=False,
                 help='Pub/Sub topic for push notifications.')
     
     parser.add_argument(
                 '--firestore_collection',
-                required=True,
+                required=False,
                 help='Firestore collection name.')
     
     parser.add_argument(
                 '--bigquery_dataset',
-                required=True,
+                required=False,
                 help='BigQuery dataset name.')
     
     parser.add_argument(
                 '--user_bigquery_table',
-                required=True,
+                required=False,
                 help='User BigQuery table name.')
     
     parser.add_argument(
                 '--episode_bigquery_table',
-                required=True,
+                required=False,
                 help='Episode BigQuery table name.')
     
     args, pipeline_opts = parser.parse_known_args()
@@ -303,65 +303,67 @@ def run():
 
         playback_event = (
             p 
-                | "ReadFromPlayBackPubSub" >> #ToDo
-                | "ParsePlaybackMessages" >> #ToDo
-                | "NormalizePlaybackEvents" >> #ToDo
+                | "ReadFromPlayBackPubSub" >> beam.io.ReadFromPubSub(subscription=f'projects/{args.project_id}/subscriptions/{args.playback_pubsub_subscription_name}')
+                | "ParsePlaybackMessages" >> beam.Map(parsePubSubMessage)
+                #| "NormalizePlaybackEvents" >
         )
 
-        engagement_event = (
-            p
-                | "ReadFromEngagementPubSub" >> #ToDo
-                | "ParseEngagementMessages" >> #ToDo
-                | "NormalizeEngagementEvents" >> #ToDo
-        )
+        playback_event | beam.Map(print)
 
-        quality_event = (
-            p
-                | "ReadFromQualityPubSub" >> #ToDo
-                | "ParseQualityMessages" >> #ToDo
-                | "NormalizeQualityEvents" >> #ToDo
-        )
+        # engagement_event = (
+        #     p
+        #         | "ReadFromEngagementPubSub" >> beam.io.ReadFromPubSub(subscription=f'projects/{args.project_id}/subscriptions/{args.engagement_pubsub_subscription_name}')
+        #         | "ParseEngagementMessages" >> beam.Map(parsePubSubMessage)
+        #         | "NormalizeEngagementEvents" >> beam.Map(normalizeEngagementEvent) 
+        # )
 
-        all_events = #ToDo
+        # quality_event = (
+        #     p
+        #         | "ReadFromQualityPubSub" >> #ToDo
+        #         | "ParseQualityMessages" >> #ToDo
+        #         | "NormalizeQualityEvents" >> #ToDo
+        # )
 
-        # A. User real-time metrics (Session-based)
-        user_data = (
-            all_events
-                | "WindowIntoSessions" >> #ToDo
-                | "KeyByUserId" >> #ToDo
-                | "GroupByUserId" >> #ToDo
-                | "ComputeUserMetrics" >> #ToDo
-        )
+        # all_events = #ToDo
 
-        (
-            user_data.metrics
-                | "WriteUserMetricsToBigQuery" >> #ToDo
-        )
+        # # A. User real-time metrics (Session-based)
+        # user_data = (
+        #     all_events
+        #         | "WindowIntoSessions" >> #ToDo
+        #         | "KeyByUserId" >> #ToDo
+        #         | "GroupByUserId" >> #ToDo
+        #         | "ComputeUserMetrics" >> #ToDo
+        # )
 
-        (
-            user_data.notify
-                | "WriteToFirestore" >> #ToDo
-        )
+        # (
+        #     user_data.metrics
+        #         | "WriteUserMetricsToBigQuery" >> #ToDo
+        # )
 
-        (
-            user_data.notify
-                | "EncodeUserNotifications" >> #ToDo
-                | "WriteUserNotificationsToPubSub" >> #ToDo
-        )
+        # (
+        #     user_data.notify
+        #         | "WriteToFirestore" >> #ToDo
+        # )
 
-        # B. Content real-time metrics (Sliding window-based)
+        # (
+        #     user_data.notify
+        #         | "EncodeUserNotifications" >> #ToDo
+        #         | "WriteUserNotificationsToPubSub" >> #ToDo
+        # )
 
-        content_data = (
-            all_events
-                | "WindowIntoSliding" >> #ToDo
-                | "KeyByEpisodeId" >> #ToDo
-                | "GroupByEpisodeId" >> #ToDo
-                | "ComputeContentMetrics" >> #ToDo
-        )
+        # # B. Content real-time metrics (Sliding window-based)
+
+        # content_data = (
+        #     all_events
+        #         | "WindowIntoSliding" >> #ToDo
+        #         | "KeyByEpisodeId" >> #ToDo
+        #         | "GroupByEpisodeId" >> #ToDo
+        #         | "ComputeContentMetrics" >> #ToDo
+        # )
           
-        (content_data.metrics 
-                | "WriteToBigQuery" >> #ToDo
-        )
+        # (content_data.metrics 
+        #         | "WriteToBigQuery" >> #ToDo
+        # )
         
 if __name__ == '__main__':
 
