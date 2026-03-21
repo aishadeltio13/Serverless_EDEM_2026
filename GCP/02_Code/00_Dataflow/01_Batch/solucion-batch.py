@@ -15,10 +15,12 @@ Professor: Javi Briones
 """ Import Libraries """
 
 # A. Apache Beam Libraries
+import tensorflow as tf
 import apache_beam as beam
 from apache_beam.io import fileio
 from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.io.filesystems import FileSystems
+
 
 # B. Apache Beam ML Libraries
 from apache_beam.ml.inference.huggingface_inference import HuggingFacePipelineModelHandler
@@ -146,7 +148,8 @@ class GetMetadataFromFileDoFn(beam.DoFn):
             "show_id": blob.metadata.get("show_id"),
             "episode_id": blob.metadata.get("episode_id"),
             "duration": blob.metadata.get("duration"),
-            "status": blob.metadata.get("status")
+            "status": blob.metadata.get("status"),
+            "duration_sec": blob.metadata.get("duration_sec")
         }
 
 class FormatFirestoreDocument(beam.DoFn):
@@ -234,7 +237,7 @@ def run():
             processed_audio_files |
             "WriteToBigQuery" >> beam.io.WriteToBigQuery(
                 table=f"{args.project_id}:{args.bigquery_dataset}.{args.bigquery_table}",
-                schema = "title:STRING, show_id:STRING, episode_id:STRING, duration:STRING, status:STRING, transcription:STRING, label:STRING",
+                schema = "title:STRING, show_id:STRING, episode_id:STRING, duration:STRING, status:STRING, transcription:STRING, label:STRING, duration_sec:STRING",
                 write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
                 create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
                 method=beam.io.WriteToBigQuery.Method.FILE_LOADS,
